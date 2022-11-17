@@ -1,0 +1,6 @@
+#
+# Bareos Filedaemon - paranoid permission set
+# This permission set does not apply any capabilities.
+# System-wide backups and restores will cause permission errors, unless the daemon is started as root or the respective Unix permissions are manually configured.
+#
+/usr/sbin/bareos-fd            root:root     0755

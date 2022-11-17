@@ -1,0 +1,252 @@
+### This file contains macros used during the Bareos build process.
+### Author: Georg Pfuetzenreuter <georg.pfuetzenreuter@suse.com>
+
+
+### Descriptions:
+
+%bareos_dscr_short Bareos - Backup Archiving Recovery Open Sourced.
+%bareos_dscr_long Bareos - Backup Archiving Recovery Open Sourced. \
+Bareos is a set of computer programs that permit you (or the system \
+administrator) to manage backup, recovery, and verification of computer \
+data across a network of computers of different kinds. In technical terms, \
+it is a network client/server based backup program. Bareos is relatively \
+easy to use and efficient, while offering many advanced storage management \
+features that make it easy to find and recover lost or damaged files. \
+Bareos source code has been released under the AGPL version 3 license.
+
+
+### Conditionals:
+
+%bareos_conditionals                                                      \
+%bcond_without                  vanilla_config                            \
+%{nil}
+
+
+### Paths:
+
+%bareos_library_dir             %{_libdir}/%{name}
+%bareos_backend_dir             %{bareos_library_dir}/backends
+%bareos_plugin_dir              %{bareos_library_dir}/plugins
+%bareos_script_dir              %{_prefix}/lib/%{name}/scripts
+%bareos_working_dir             %{_sharedstatedir}/%{name}
+%bareos_subsys_dir              %{_rundir}/%{name}
+%bareos_pid_dir                 %{bareos_subsys_dir}
+%bareos_bsr_dir                 %{bareos_working_dir}
+%bareos_apache_conf_dir         %{_sysconfdir}/apache2/conf.d/
+%bareos_CMAKE_BUILDDIR          cmake-build
+
+
+### Users and groups:
+
+%bareos_daemon_user             bareos
+%bareos_daemon_group            bareos
+%bareos_director_daemon_user    %{bareos_daemon_user}
+%bareos_storage_daemon_user     %{bareos_daemon_user}
+# FD runs as daemon_user on SUSE distributions as the binary has capabilities set there. On other distributions, it will run as root.
+%bareos_file_daemon_user        %{bareos_daemon_user}
+%bareos_storage_daemon_group    %{bareos_daemon_group}
+%bareos_www_daemon_user         wwwrun
+%bareos_www_daemon_group        www
+
+%create_group()                                                           \
+getent group %1 > /dev/null || groupadd -r %1
+
+%create_user()                                                            \
+getent passwd %1 > /dev/null || useradd -rc "Bareos" -d %{bareos_working_dir} -g %{bareos_daemon_group} -s /sbin/nologin %1
+
+
+### Build helpers:
+
+%bareos_configure                                                         \
+cmake  ..                                                               \\\
+  -DCMAKE_VERBOSE_MAKEFILE=ON                                           \\\
+  -DCMAKE_INSTALL_PREFIX:PATH=/usr                                      \\\
+  -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib                                  \\\
+  -DINCLUDE_INSTALL_DIR:PATH=/usr/include                               \\\
+  -DLIB_INSTALL_DIR:PATH=/usr/lib                                       \\\
+  -DSYSCONF_INSTALL_DIR:PATH=/etc                                       \\\
+  -DSHARE_INSTALL_PREFIX:PATH=/usr/share                                \\\
+  -DBUILD_SHARED_LIBS:BOOL=ON                                           \\\
+  -DDEBUG_PREFIX_MAP:BOOL=OFF                                           \\\
+  -Dprefix=%{_prefix}                                                   \\\
+  -Dlibdir=%{bareos_library_dir}                                        \\\
+  -Dsbindir=%{_sbindir}                                                 \\\
+  -Dsbin-perm=755                                                       \\\
+  -Dsysconfdir=%{_sysconfdir}                                           \\\
+  -Dconfdir=%{_sysconfdir}/bareos                                       \\\
+  -Dmandir=%{_mandir}                                                   \\\
+  -Ddocdir=%{_docdir}/%{name}                                           \\\
+  -Dhtmldir=%{_docdir}/%{name}/html                                     \\\
+  -Darchivedir=/var/lib/%{name}/storage                                 \\\
+  -Dbackenddir=%{bareos_backend_dir}                                    \\\
+  -Dscriptdir=%{bareos_script_dir}                                      \\\
+  -Dworkingdir=%{bareos_working_dir}                                    \\\
+  -Dplugindir=%{bareos_plugin_dir}                                      \\\
+  -Dpiddir=%{bareos_pid_dir}                                            \\\
+  -Dbsrdir=%{bareos_bsr_dir}                                            \\\
+  -Dlogdir=/var/log/bareos                                              \\\
+  -Dsubsysdir=%{bareos_subsys_dir}                                      \\\
+%if 0%{?python_plugins}                                                   \
+  -Dpython=yes                                                          \\\
+%endif                                                                    \
+  -Dreadline=yes                                                        \\\
+  -Dbatch-insert=yes                                                    \\\
+  -Ddynamic-cats-backends=yes                                           \\\
+  -Ddynamic-storage-backends=yes                                        \\\
+  -Dscsi-crypto=yes                                                     \\\
+  -Dlmdb=yes                                                            \\\
+  -Dndmp=yes                                                            \\\
+  -Dipv6=yes                                                            \\\
+  -Dacl=yes                                                             \\\
+  -Dxattr=yes                                                           \\\
+%if 0%{?build_bat}                                                        \
+  -Dbat=yes                                                             \\\
+%endif                                                                    \
+%if 0%{?build_qt_monitor}                                                 \
+  -Dtraymonitor=yes                                                     \\\
+%endif                                                                    \
+%if 0%{?client_only}                                                      \
+  -Dclient-only=yes                                                     \\\
+%endif                                                                    \
+  -Dpostgresql=yes                                                      \\\
+  -Ddir-user=%{bareos_director_daemon_user}                             \\\
+  -Ddir-group=%{bareos_daemon_group}                                    \\\
+  -Dsd-user=%{bareos_storage_daemon_user}                               \\\
+  -Dsd-group=%{bareos_storage_daemon_group}                             \\\
+%if 0%{?suse_version}                                                     \
+  -Dfd-user=%{bareos_file_daemon_user}                                  \\\
+%else                                                                     \
+  -Dfd-user=root                                                        \\\
+%endif                                                                    \
+  -Dfd-group=%{bareos_daemon_group}                                     \\\
+  -Ddir-password="XXX_REPLACE_WITH_DIRECTOR_PASSWORD_XXX"               \\\
+  -Dfd-password="XXX_REPLACE_WITH_CLIENT_PASSWORD_XXX"                  \\\
+  -Dsd-password="XXX_REPLACE_WITH_STORAGE_PASSWORD_XXX"                 \\\
+  -Dmon-dir-password="XXX_REPLACE_WITH_DIRECTOR_MONITOR_PASSWORD_XXX"   \\\
+  -Dmon-fd-password="XXX_REPLACE_WITH_CLIENT_MONITOR_PASSWORD_XXX"      \\\
+  -Dmon-sd-password="XXX_REPLACE_WITH_STORAGE_MONITOR_PASSWORD_XXX"     \\\
+  -Dopenssl=yes                                                         \\\
+  -Dbasename="XXX_REPLACE_WITH_LOCAL_HOSTNAME_XXX"                      \\\
+  -Dhostname="XXX_REPLACE_WITH_LOCAL_HOSTNAME_XXX"                      \\\
+%if 0%{?systemd_support}                                                  \
+  -Dsystemd=yes                                                         \\\
+%endif                                                                    \
+  -Dincludes=yes                                                        \\\
+  -Ddefault_db_backend="XXX_REPLACE_WITH_DATABASE_DRIVER_XXX"           \\\
+  -Dwebuiconfdir=%{_sysconfdir}/bareos-webui                            \\\
+  -DVERSION_STRING=%version
+
+%bareos_compile                                                           \
+%__make CFLAGS="$RPM_OPT_FLAGS" CXXFLAGS="$RPM_OPT_FLAGS" %{?_smp_mflags}
+
+%bareos_build                                                             \
+export CFLAGS="${CFLAGS:-%optflags}"                                      \
+export CXXFLAGS="${CXXFLAGS:-%optflags}"                                  \
+%if 0%{?suse_version} <= 1315                                             \
+export CC=gcc-11                                                          \
+export CXX=g++-11                                                         \
+export CFLAGS="$CFLAGS -fPIE"                                             \
+export CXXFLAGS="$CXXFLAGS -fPIE"                                         \
+export LDFLAGS="$LDFLAGS -pie"                                            \
+%endif                                                                    \
+%if 0%{?suse_version} > 1500                                              \
+export CFLAGS="$CFLAGS -s"                                                \
+export CXXFLAGS="$(echo $CXXFLAGS | sed 's/O2/Os/') -s"                   \
+%endif                                                                    \
+mkdir %{bareos_CMAKE_BUILDDIR}                                            \
+pushd %{bareos_CMAKE_BUILDDIR}                                            \
+%bareos_configure                                                         \
+%bareos_compile                                                           \
+popd
+
+%bareos_install                                                           \
+pushd %{bareos_CMAKE_BUILDDIR}                                            \
+%__make %{?_smp_mflags} DESTDIR=%{buildroot} install                      \
+popd
+
+%bareos_test                                                              \
+pushd %{bareos_CMAKE_BUILDDIR}                                            \
+REGRESS_DEBUG=1 ctest -V -S CTestScript.cmake || echo "ctest result:$?"   \
+popd
+
+%bareos_cleanup                                                           \
+cleanup () {                                                              \
+local files                                                               \
+local type="$1"                                                           \
+echo "Cleanup for $type invoked ..."                                      \
+case "$type" in                                                           \
+  'client')                                                               \
+    manfiles=(                                                            \
+      man1/bregex.1 man1/bsmtp.1 man1/bwild.1                    \
+      man8/bareos-dbcheck.8 man8/bareos-dbcopy.8 man8/btape.8    \
+      man8/bareos-dir.8 man8/bareos-sd.8 man8/bareos.8           \
+      man8/bcopy.8 man8/bextract.8 man8/bls.8                    \
+      man8/bpluginfo.8 man8/bscan.8 man8/bscrypto.8              \
+    )                                                                     \
+    etcfiles=(                                                            \
+      logrotate.d/bareos-dir %{name}/mtx-changer.conf                     \
+      rc.d/init.d/bareos-dir rc.d/init.d/bareos-sd                        \
+    )                                                                     \
+    scriptfiles=( disk-changer mtx-changer ) ;;                           \
+  'systemd')                                                              \
+    etcfiles=(                                                            \
+      rc.d/init.d/bareos-dir rc.d/init.d/bareos-sd rc.d/init.d/bareos-fd  \
+      init.d/bareos-dir init.d/bareos-sd init.d/bareos-fd                 \
+    ) ;;                                                                  \
+  'suse_fw')                                                              \
+    fwfiles=( bareos-dir bareos-sd bareos-fd )                            \
+    etcfiles=("${fwfiles[@]/#/sysconfig\/SuSEfirewall2.d\/services\/}") ;;\
+  'vmware')                                                               \
+    sbinfiles=(                                                           \
+      bareos_vadp_dumper bareos_vadp_dumper_wrapper.sh vmware_cbt_tool.py \
+    )                                                                     \
+    pluginfiles=( BareosFdPluginVMware.py bareos-fd-vmware.py ) ;;        \
+  'misc')                                                                 \
+    scriptfiles=( bareos_config btraceback.dbx btraceback.mdb )           \
+    docfiles=( %{name}/INSTALL )                                          \
+    sbinfiles=( %{name} ) ;;                                              \
+  'python_plugins')                                                       \
+    pushd %{bareos_library_dir}/plugins                                   \
+    pluginfiles=( python-*.so *.py* )                                     \
+    popd                                                                  \
+    etcfiles=( %{name}/bareos-dir.d/plugin-python-ldap.conf ) ;;          \
+  'glusterfs')                                                            \
+    scriptfiles=( bareos-glusterfind-wrapper ) ;;                         \
+  'qtmonitor')                                                            \
+    manfiles=( man1/bareos-tray-monitor.1 ) ;;                         \
+  'vanillaconfig')                                                        \
+    defaultdirs=(                                                         \
+      bareos-dir.d bareos-fd.d bareos-sd.d tray-monitor.d                 \
+      bconsole.conf mtx-changer.conf                                      \
+    )                                                                     \
+    etcfiles=("${defaultdirs[@]/#/%\{name\}\/}") ; rmflags='-r' ;;        \
+  *) echo "Invalid argument in bareos_cleanup -> cleanup: $1"             \
+      exit 1 ;;                                                           \
+esac                                                                      \
+files=(                                                                   \
+  "${manfiles[@]/#/%\{_mandir\}\/}"                                       \
+  "${etcfiles[@]/#/%\{_sysconfdir\}\/}"                                   \
+  "${scriptfiles[@]/#/%\{bareos_script_dir\}\/}"                          \
+  "${sbinfiles[@]/#/%\{_sbindir\}\/}"                                     \
+  "${pluginfiles[@]/#/%\{bareos_plugin_dir\}\/}"                          \
+  "${scriptfiles[@]/#/%\{bareos_script_dir\}\/}"                          \
+  "${docfiles[@]/#/%\{_docdir\}\/}"                                       \
+)                                                                         \
+echo "Deleting ${files[@]} ..."                                           \
+rm -fv $rmflags "${files[@]/#/%\{buildroot\}}"                            \
+unset files                                                             \\\
+manfiles etcfiles scriptfiles sbinfiles pluginfiles scriptfiles docfiles  \
+}                                                                         \
+recursive_chmodx () {                                                     \
+local directory="$1"                                                      \
+local type="$2"                                                           \
+echo "recursive_chmodx for $directory invoked ..."                        \
+case "$type" in                                                           \
+        'sh') export pattern='^#!.*/bin/sh'     ;;                        \
+        'py') export pattern='^#!.*/bin/python' ;;                        \
+esac                                                                      \
+find "%{buildroot}$directory" -type f -execdir                          \\\
+sh -c 'head -n1 "$1" | grep -q "$pattern" && chmod +x "$1"' _ {} \\;      \
+unset directory type pattern                                              \
+}                                                                         \
+%{nil}

@@ -1,0 +1,6 @@
+#
+# Bareos Filedaemon - secure permission set
+# This permission set applies a capability allowing the program to override file permissions for system wide backups.
+#
+/usr/sbin/bareos-fd            root:bareos     0750
+  +capabilities CAP_DAC_READ_SEARCH+ep
