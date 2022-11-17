@@ -2,19 +2,8 @@
 # spec file for package bareos
 #
 # Copyright (c) 2022 SUSE LLC
-# Copyright (c) 2013-2021 Bareos GmbH & Co KG
+# Copyright (c) 2013-2022 Bareos GmbH & Co KG
 # Copyright (c) 2011-2012 Bruno Friedmann (Ioda-Net) and Philipp Storz (dass IT)
-#
-# All modifications and additions to the file contributed by third parties
-# remain the property of their copyright owners, unless otherwise agreed
-# upon. The license for this file, and modifications and additions to the
-# file, is the same license as for the pristine package itself (unless the
-# license for the pristine package is not an Open Source License, in which
-# case the license is the MIT License). An "Open Source License" is a
-# license that conforms to the Open Source Definition (Version 1.9)
-# published by the Open Source Initiative.
-
-# Please submit bugfixes or comments via https://bugs.opensuse.org/
 #
 
 %bareos_conditionals
@@ -1789,3 +1778,4 @@ a2enmod php5 &> /dev/null || true
 %endif
 
 %changelog
+
